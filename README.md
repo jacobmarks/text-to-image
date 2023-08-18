@@ -29,8 +29,8 @@ It is straightforward to add support for other models!
 
 ```shell
 fiftyone plugins download \
-    https://github.com/voxel51/fiftyone-plugins \
-    --plugin-names @voxel51/txt2img
+    https://github.com/jacobmarks/ai-art-gallery \
+    --plugin-names ai_art_gallery
 ```
 
 If you want to use Replicate models (Stable Diffusion and VQGAN-CLIP), you will

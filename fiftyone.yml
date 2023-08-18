@@ -1,8 +1,8 @@
 fiftyone:
   version: "~0.21.0"
-name: "@voxel51/txt2img"
+name: "ai_art_gallery"
 version: "1.0.0"
-description: "Run a Text-to-image model"
-url: "https://github.com/voxel51/fiftyone-plugins/blob/main/plugins/txt2img/REAME.md"
+description: "Run a Text-to-image model and add resulting image to your dataset"
+url: "https://github.com/jacobmarks/ai-art-gallery/blob/main/README.md"
 operators:
   - txt2img
