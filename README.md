@@ -1,4 +1,4 @@
-## Text2Image Plugin
+## AI Art Gallery Plugin
 
 ![txt2img](https://github.com/voxel51/fiftyone-plugins/assets/12500356/7634a6f8-717c-4435-b034-58b50766199b)
 
