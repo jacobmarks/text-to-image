@@ -28,9 +28,7 @@ It is straightforward to add support for other models!
 ## Installation
 
 ```shell
-fiftyone plugins download \
-    https://github.com/jacobmarks/ai-art-gallery \
-    --plugin-names ai_art_gallery
+fiftyone plugins download https://github.com/jacobmarks/ai-art-gallery
 ```
 
 If you want to use Replicate models (Stable Diffusion and VQGAN-CLIP), you will
