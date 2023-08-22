@@ -1,10 +1,11 @@
-"""Text2Image plugin.
+"""AI Art Gallery plugin.
 
 | Copyright 2017-2023, Voxel51, Inc.
 | `voxel51.com <https://voxel51.com/>`_
 |
 """
 
+from datetime import datetime
 import os
 import uuid
 from importlib.util import find_spec
@@ -23,10 +24,9 @@ SD_MODEL_URL = "stability-ai/stable-diffusion:27b93a2413e7f36cd83da926f3656280b2
 SD_SCHEDULER_CHOICES = (
     "DDIM",
     "K_EULER",
-    "DPMSolverMultiStep",
     "K_EULER_ANCESTRAL",
     "PNDM",
-    "KLMS",
+    "K-LMS",
 )
 SD_SIZE_CHOICES = (
     "64",
@@ -154,6 +154,34 @@ def get_model(model_name):
     raise ValueError(f"Model {model_name} not found.")
 
 
+def set_stable_diffusion_config(sample, ctx):
+    sample["stable_diffusion_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get("inference_steps", "None provided"),
+        scheduler=ctx.params.get("scheduler_choices", "None provided"),
+        width=ctx.params.get("width_choices", "None provided"),
+        height=ctx.params.get("height_choices", "None provided"),
+    )
+
+
+def set_vqgan_clip_config(sample, ctx):
+    return
+
+
+def set_dalle2_config(sample, ctx):
+    sample["dalle2_config"] = fo.DynamicEmbeddedDocument(
+        size=ctx.params.get("size_choices", "None provided")
+    )
+
+
+def set_config(sample, ctx, model_name):
+    if model_name == "sd":
+        set_stable_diffusion_config(sample, ctx)
+    if model_name == "dalle2":
+        set_dalle2_config(sample, ctx)
+    if model_name == "vqgan-clip":
+        set_vqgan_clip_config(sample, ctx)
+
+
 def generate_filepath(dataset):
     if dataset.count() == 0:
         base_dir = "/tmp"
@@ -169,9 +197,8 @@ class Txt2Image(foo.Operator):
     def config(self):
         return foo.OperatorConfig(
             name="txt2img",
-            label="Txt2Img: Generate Images from Text",
+            label="AI Art Gallery: Generate Image from Text",
             dynamic=True,
-            execute_as_generator=True,
         )
 
     def resolve_input(self, ctx):
@@ -274,16 +301,18 @@ class Txt2Image(foo.Operator):
             tags=["generated"],
             model=model.name,
             prompt=prompt,
+            date_created=datetime.now(),
         )
-        ctx.dataset.add_sample(sample)
-        ctx.trigger("reload_samples")
+        set_config(sample, ctx, model_name)
 
-    def resolve_output(self, ctx):
-        outputs = types.Object()
-        outputs.str(
-            "prompt", label="Successfully generated image with prompt:"
-        )
-        return types.Property(outputs)
+        dataset = ctx.dataset
+        dataset.add_sample(sample, dynamic=True)
+
+        if dataset.get_dynamic_field_schema() is not None:
+            dataset.add_dynamic_sample_fields()
+            ctx.trigger("reload_dataset")
+        else:
+            ctx.trigger("reload_samples")
 
 
 def register(plugin):
