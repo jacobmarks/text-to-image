@@ -203,6 +203,12 @@ class Txt2Image(foo.Operator):
 
     def resolve_input(self, ctx):
         inputs = types.Object()
+        if len(ctx.dataset) == 0:
+            warning = types.Warning(
+                label="Warning", description="The dataset is empty, so downloaded files will be stored in '/tmp.'"
+            )
+            inputs.view("warning", warning)
+
         replicate_flag = allows_replicate_models()
         openai_flag = allows_openai_models()
         if not replicate_flag and not openai_flag:
