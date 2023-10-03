@@ -1,5 +1,5 @@
 fiftyone:
-  version: "~0.21.0"
+  version: ">=0.21.0"
 name: "@jacobmarks/ai_art_gallery"
 version: "1.0.0"
 description: "Create your own AI Art Gallery with Text-to-image models and FiftyOne!"
