@@ -51,7 +51,7 @@ SDXL_SCHEDULER_CHOICES = (
     "PNDM",
     "DPMSolverMultistep",
     "KarrasDPM",
-    "HeunDiscrete"
+    "HeunDiscrete",
 )
 
 SDXL_REFINE_CHOICES = ("None", "Expert Ensemble", "Base")
@@ -59,10 +59,8 @@ SDXL_REFINE_CHOICES = ("None", "Expert Ensemble", "Base")
 SDXL_REFINE_MAP = {
     "None": "no_refiner",
     "Expert Ensemble": "expert_ensemble_refiner",
-    "Base": "base_image_refiner"
+    "Base": "base_image_refiner",
 }
-
-
 
 
 VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee48f5f7f5c0b6e56493d7cf55f74d02f144d8"
@@ -128,7 +126,7 @@ class StableDiffusion(Text2Image):
         if type(response) == list:
             response = response[0]
         return response
-    
+
 
 class SDXL(Text2Image):
     """Wrapper for a StableDiffusion XL model."""
@@ -140,7 +138,7 @@ class SDXL(Text2Image):
 
     def generate_image(self, ctx):
         prompt = ctx.params.get("prompt", "None provided")
-        inference_steps = ctx.params.get("inference_steps", 50.)
+        inference_steps = ctx.params.get("inference_steps", 50.0)
         scheduler = ctx.params.get("scheduler_choices", "None provided")
         guidance_scale = ctx.params.get("guidance_scale", 7.5)
         refiner = ctx.params.get("refine_choices", SDXL_REFINE_CHOICES[0])
@@ -154,7 +152,7 @@ class SDXL(Text2Image):
             "inference_steps": inference_steps,
             "scheduler": scheduler,
             "refine": refiner,
-            "guidance_scale": guidance_scale
+            "guidance_scale": guidance_scale,
         }
         if negative_prompt is not None:
             _inputs["negative_prompt"] = negative_prompt
@@ -162,7 +160,7 @@ class SDXL(Text2Image):
             _inputs["refine_steps"] = refine_steps
         if high_noise_frac is not None:
             _inputs["high_noise_frac"] = high_noise_frac
-        
+
         response = replicate.run(
             self.model_name,
             input=_inputs,
@@ -227,10 +225,12 @@ def set_sdxl_config(sample, ctx):
         inference_steps=ctx.params.get("inference_steps", "None provided"),
         scheduler=ctx.params.get("scheduler_choices", "None provided"),
         guidance_scale=ctx.params.get("guidance_scale", 7.5),
-        refiner=SDXL_REFINE_MAP[ctx.params.get("refine_choices", "None provided")],
+        refiner=SDXL_REFINE_MAP[
+            ctx.params.get("refine_choices", "None provided")
+        ],
         refine_steps=ctx.params.get("refine_steps", None),
         negative_prompt=ctx.params.get("negative_prompt", None),
-        high_noise_frac=ctx.params.get("high_noise_frac", None)
+        high_noise_frac=ctx.params.get("high_noise_frac", None),
     )
 
 
@@ -266,7 +266,6 @@ def generate_filepath(dataset):
     return os.path.join(base_dir, filename)
 
 
-
 #### MODEL CHOICES ####
 def _add_replicate_choices(model_choices):
     model_choices.add_choice("sd", label="Stable Diffusion")
@@ -276,7 +275,6 @@ def _add_replicate_choices(model_choices):
 
 def _add_openai_choices(model_choices):
     model_choices.add_choice("dalle2", label="DALL-E2")
-
 
 
 #### STABLE DIFFUSION INPUTS ####
@@ -308,15 +306,11 @@ def _handle_stable_diffusion_input(ctx, inputs):
         label="Num Inference Steps",
         componentsProps={"slider": {"min": 1, "max": 500, "step": 1}},
     )
-    inputs.int(
-        "inference_steps", default=50, view=inference_steps_slider
-    )
+    inputs.int("inference_steps", default=50, view=inference_steps_slider)
 
     scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
     for scheduler in SD_SCHEDULER_CHOICES:
-        scheduler_choices_dropdown.add_choice(
-            scheduler, label=scheduler
-        )
+        scheduler_choices_dropdown.add_choice(scheduler, label=scheduler)
 
     inputs.enum(
         "scheduler_choices",
@@ -333,9 +327,7 @@ def _handle_sdxl_input(ctx, inputs):
 
     scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
     for scheduler in SDXL_SCHEDULER_CHOICES:
-        scheduler_choices_dropdown.add_choice(
-            scheduler, label=scheduler
-        )
+        scheduler_choices_dropdown.add_choice(scheduler, label=scheduler)
 
     inputs.enum(
         "scheduler_choices",
@@ -348,26 +340,20 @@ def _handle_sdxl_input(ctx, inputs):
         label="Num Inference Steps",
         componentsProps={"slider": {"min": 1, "max": 100, "step": 1}},
     )
-    inputs.int(
-        "inference_steps", default=50, view=inference_steps_slider
-    )
+    inputs.int("inference_steps", default=50, view=inference_steps_slider)
 
     guidance_scale_slider = types.SliderView(
         label="Guidance Scale",
         componentsProps={"slider": {"min": 0.0, "max": 10.0, "step": 0.1}},
     )
-    inputs.float(
-        "guidance_scale", default=7.5, view=guidance_scale_slider
-    )
+    inputs.float("guidance_scale", default=7.5, view=guidance_scale_slider)
 
     refiner_choices_dropdown = types.Dropdown(
-        label="Refiner", 
+        label="Refiner",
         description="Which refine style to use",
-        )
+    )
     for refiner in SDXL_REFINE_CHOICES:
-        refiner_choices_dropdown.add_choice(
-            refiner, label=refiner
-        )
+        refiner_choices_dropdown.add_choice(refiner, label=refiner)
 
     inputs.enum(
         "refine_choices",
@@ -384,18 +370,18 @@ def _handle_sdxl_input(ctx, inputs):
             componentsProps={"slider": {"min": 1, "max": _default, "step": 1}},
         )
         inputs.int(
-            "refine_steps", 
-            label="Refine Steps", 
-            description="The number of steps to refine", 
-            default=_default, 
-            view=refine_steps_slider
+            "refine_steps",
+            label="Refine Steps",
+            description="The number of steps to refine",
+            default=_default,
+            view=refine_steps_slider,
         )
     elif rfc == "expert_ensemble_refiner":
         inputs.float(
-            "high_noise_frac", 
+            "high_noise_frac",
             label="High Noise Fraction",
             description="The fraction of noise to use",
-            default=0.8
+            default=0.8,
         )
 
 
@@ -425,11 +411,11 @@ INPUT_MAPPER = {
     "vqgan-clip": _handle_vqgan_clip_input,
 }
 
+
 def _handle_input(ctx, inputs):
     model_name = ctx.params.get("model_choices", "sd")
     model_input_handler = INPUT_MAPPER[model_name]
     model_input_handler(ctx, inputs)
-
 
 
 class Txt2Image(foo.Operator):
@@ -447,7 +433,8 @@ class Txt2Image(foo.Operator):
         inputs = types.Object()
         if len(ctx.dataset) == 0:
             warning = types.Warning(
-                label="Warning", description="The dataset is empty, so downloaded files will be stored in '/tmp.'"
+                label="Warning",
+                description="The dataset is empty, so downloaded files will be stored in '/tmp.'",
             )
             inputs.view("warning", warning)
 

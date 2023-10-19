@@ -2,16 +2,15 @@
 
 ![ai_art_gallery_txt2img](https://github.com/jacobmarks/ai-art-gallery/assets/12500356/23872da5-b722-4c34-b49f-b72fcfc7cdb7)
 
-
 This plugin is a Python plugin that allows you to generate images from text
 prompts and add them directly into your dataset.
 
 It demonstrates how to do the following:
 
--   use Python to create an operator with different options depending on user
-    choices
--   use `componentProps` to customize the UI
--   download images from URL and add them to the dataset
+- use Python to create an operator with different options depending on user
+  choices
+- use `componentProps` to customize the UI
+- download images from URL and add them to the dataset
 
 :warning: This plugin is only verified to work for local datasets. It may not
 work for remote datasets.
@@ -20,9 +19,10 @@ work for remote datasets.
 
 This version of the plugin supports the following models:
 
--   [DALL-E2](https://openai.com/dall-e-2)
--   [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
--   [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
+- [SDXL](https://replicate.com/stability-ai/sdxl)
+- [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
+- [DALL-E2](https://openai.com/dall-e-2)
+- [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 
 It is straightforward to add support for other models!
 
@@ -47,4 +47,4 @@ locally.
 
 ### `txt2img`
 
--   Generates an image from a text prompt and adds it to the dataset
+- Generates an image from a text prompt and adds it to the dataset
