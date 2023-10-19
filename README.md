@@ -1,6 +1,6 @@
 ## AI Art Gallery Plugin
 
-![ai_art_gallery_txt2img](https://github.com/jacobmarks/ai-art-gallery/assets/12500356/23872da5-b722-4c34-b49f-b72fcfc7cdb7)
+![ai_art_gallery](https://github.com/jacobmarks/ai-art-gallery/assets/12500356/968b8084-952d-4fd2-8a28-2cc18bb8d02d)
 
 ### Updates
 
