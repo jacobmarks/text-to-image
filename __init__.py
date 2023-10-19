@@ -43,6 +43,27 @@ SD_SIZE_CHOICES = (
     "1024",
 )
 
+SDXL_MODEL_URL = "stability-ai/sdxl:c221b2b8ef527988fb59bf24a8b97c4561f1c671f73bd389f866bfb27c061316"
+SDXL_SCHEDULER_CHOICES = (
+    "DDIM",
+    "K_EULER",
+    "K_EULER_ANCESTRAL",
+    "PNDM",
+    "DPMSolverMultistep",
+    "KarrasDPM",
+    "HeunDiscrete"
+)
+
+SDXL_REFINE_CHOICES = ("None", "Expert Ensemble", "Base")
+
+SDXL_REFINE_MAP = {
+    "None": "no_refiner",
+    "Expert Ensemble": "expert_ensemble_refiner",
+    "Base": "base_image_refiner"
+}
+
+
+
 
 VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee48f5f7f5c0b6e56493d7cf55f74d02f144d8"
 
@@ -107,6 +128,48 @@ class StableDiffusion(Text2Image):
         if type(response) == list:
             response = response[0]
         return response
+    
+
+class SDXL(Text2Image):
+    """Wrapper for a StableDiffusion XL model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "sdxl"
+        self.model_name = SDXL_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        inference_steps = ctx.params.get("inference_steps", 50.)
+        scheduler = ctx.params.get("scheduler_choices", "None provided")
+        guidance_scale = ctx.params.get("guidance_scale", 7.5)
+        refiner = ctx.params.get("refine_choices", SDXL_REFINE_CHOICES[0])
+        refiner = SDXL_REFINE_MAP[refiner]
+        refine_steps = ctx.params.get("refine_steps", None)
+        negative_prompt = ctx.params.get("negative_prompt", None)
+        high_noise_frac = ctx.params.get("high_noise_frac", None)
+
+        _inputs = {
+            "prompt": prompt,
+            "inference_steps": inference_steps,
+            "scheduler": scheduler,
+            "refine": refiner,
+            "guidance_scale": guidance_scale
+        }
+        if negative_prompt is not None:
+            _inputs["negative_prompt"] = negative_prompt
+        if refine_steps is not None:
+            _inputs["refine_steps"] = refine_steps
+        if high_noise_frac is not None:
+            _inputs["high_noise_frac"] = high_noise_frac
+        
+        response = replicate.run(
+            self.model_name,
+            input=_inputs,
+        )
+        if type(response) == list:
+            response = response[0]
+        return response
 
 
 class DALLE2(Text2Image):
@@ -141,14 +204,13 @@ class VQGANCLIP(Text2Image):
 
 
 def get_model(model_name):
-    if model_name == "sd":
-        return StableDiffusion()
-    if model_name == "dalle2":
-        return DALLE2()
-    if model_name == "vqgan-clip":
-        return VQGANCLIP()
-
-    raise ValueError(f"Model {model_name} not found.")
+    mapping = {
+        "sd": StableDiffusion,
+        "sdxl": SDXL,
+        "dalle2": DALLE2,
+        "vqgan-clip": VQGANCLIP,
+    }
+    return mapping[model_name]()
 
 
 def set_stable_diffusion_config(sample, ctx):
@@ -157,6 +219,18 @@ def set_stable_diffusion_config(sample, ctx):
         scheduler=ctx.params.get("scheduler_choices", "None provided"),
         width=ctx.params.get("width_choices", "None provided"),
         height=ctx.params.get("height_choices", "None provided"),
+    )
+
+
+def set_sdxl_config(sample, ctx):
+    sample["sdxl_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get("inference_steps", "None provided"),
+        scheduler=ctx.params.get("scheduler_choices", "None provided"),
+        guidance_scale=ctx.params.get("guidance_scale", 7.5),
+        refiner=SDXL_REFINE_MAP[ctx.params.get("refine_choices", "None provided")],
+        refine_steps=ctx.params.get("refine_steps", None),
+        negative_prompt=ctx.params.get("negative_prompt", None),
+        high_noise_frac=ctx.params.get("high_noise_frac", None)
     )
 
 
@@ -171,12 +245,15 @@ def set_dalle2_config(sample, ctx):
 
 
 def set_config(sample, ctx, model_name):
-    if model_name == "sd":
-        set_stable_diffusion_config(sample, ctx)
-    if model_name == "dalle2":
-        set_dalle2_config(sample, ctx)
-    if model_name == "vqgan-clip":
-        set_vqgan_clip_config(sample, ctx)
+    mapping = {
+        "sd": set_stable_diffusion_config,
+        "sdxl": set_sdxl_config,
+        "dalle2": set_dalle2_config,
+        "vqgan-clip": set_vqgan_clip_config,
+    }
+
+    config_setter = mapping[model_name]
+    config_setter(sample, ctx)
 
 
 def generate_filepath(dataset):
@@ -187,6 +264,172 @@ def generate_filepath(dataset):
         base_dir = "/".join(path.split("/")[:-1])
     filename = str(uuid.uuid4())[:13].replace("-", "") + ".png"
     return os.path.join(base_dir, filename)
+
+
+
+#### MODEL CHOICES ####
+def _add_replicate_choices(model_choices):
+    model_choices.add_choice("sd", label="Stable Diffusion")
+    model_choices.add_choice("sdxl", label="SDXL")
+    model_choices.add_choice("vqgan-clip", label="VQGAN-CLIP")
+
+
+def _add_openai_choices(model_choices):
+    model_choices.add_choice("dalle2", label="DALL-E2")
+
+
+
+#### STABLE DIFFUSION INPUTS ####
+def _handle_stable_diffusion_input(ctx, inputs):
+    size_choices = SD_SIZE_CHOICES
+    width_choices = types.Dropdown(label="Width")
+    for size in size_choices:
+        width_choices.add_choice(size, label=size)
+
+    inputs.enum(
+        "width_choices",
+        width_choices.values(),
+        default="512",
+        view=width_choices,
+    )
+
+    height_choices = types.Dropdown(label="Height")
+    for size in size_choices:
+        height_choices.add_choice(size, label=size)
+
+    inputs.enum(
+        "height_choices",
+        height_choices.values(),
+        default="512",
+        view=height_choices,
+    )
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 500, "step": 1}},
+    )
+    inputs.int(
+        "inference_steps", default=50, view=inference_steps_slider
+    )
+
+    scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
+    for scheduler in SD_SCHEDULER_CHOICES:
+        scheduler_choices_dropdown.add_choice(
+            scheduler, label=scheduler
+        )
+
+    inputs.enum(
+        "scheduler_choices",
+        scheduler_choices_dropdown.values(),
+        default="K_EULER",
+        view=scheduler_choices_dropdown,
+    )
+
+
+#### SDXL INPUTS ####
+def _handle_sdxl_input(ctx, inputs):
+
+    inputs.str("negative_prompt", label="Negative Prompt", required=False)
+
+    scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
+    for scheduler in SDXL_SCHEDULER_CHOICES:
+        scheduler_choices_dropdown.add_choice(
+            scheduler, label=scheduler
+        )
+
+    inputs.enum(
+        "scheduler_choices",
+        scheduler_choices_dropdown.values(),
+        default="K_EULER",
+        view=scheduler_choices_dropdown,
+    )
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 100, "step": 1}},
+    )
+    inputs.int(
+        "inference_steps", default=50, view=inference_steps_slider
+    )
+
+    guidance_scale_slider = types.SliderView(
+        label="Guidance Scale",
+        componentsProps={"slider": {"min": 0.0, "max": 10.0, "step": 0.1}},
+    )
+    inputs.float(
+        "guidance_scale", default=7.5, view=guidance_scale_slider
+    )
+
+    refiner_choices_dropdown = types.Dropdown(
+        label="Refiner", 
+        description="Which refine style to use",
+        )
+    for refiner in SDXL_REFINE_CHOICES:
+        refiner_choices_dropdown.add_choice(
+            refiner, label=refiner
+        )
+
+    inputs.enum(
+        "refine_choices",
+        refiner_choices_dropdown.values(),
+        default="None",
+        view=refiner_choices_dropdown,
+    )
+
+    rfc = SDXL_REFINE_MAP[ctx.params.get("refine_choices", "None")]
+    if rfc == "base_image_refiner":
+        _default = ctx.params.get("inference_steps", 50)
+        refine_steps_slider = types.SliderView(
+            label="Num Refine Steps",
+            componentsProps={"slider": {"min": 1, "max": _default, "step": 1}},
+        )
+        inputs.int(
+            "refine_steps", 
+            label="Refine Steps", 
+            description="The number of steps to refine", 
+            default=_default, 
+            view=refine_steps_slider
+        )
+    elif rfc == "expert_ensemble_refiner":
+        inputs.float(
+            "high_noise_frac", 
+            label="High Noise Fraction",
+            description="The fraction of noise to use",
+            default=0.8
+        )
+
+
+#### DALLE2 INPUTS ####
+def _handle_dalle2_input(ctx, inputs):
+    size_choices_dropdown = types.Dropdown(label="Size")
+    for size in DALLE2_SIZE_CHOICES:
+        size_choices_dropdown.add_choice(size, label=size)
+
+    inputs.enum(
+        "size_choices",
+        size_choices_dropdown.values(),
+        default="512x512",
+        view=size_choices_dropdown,
+    )
+
+
+#### VQGAN-CLIP INPUTS ####
+def _handle_vqgan_clip_input(ctx, inputs):
+    return
+
+
+INPUT_MAPPER = {
+    "sd": _handle_stable_diffusion_input,
+    "sdxl": _handle_sdxl_input,
+    "dalle2": _handle_dalle2_input,
+    "vqgan-clip": _handle_vqgan_clip_input,
+}
+
+def _handle_input(ctx, inputs):
+    model_name = ctx.params.get("model_choices", "sd")
+    model_input_handler = INPUT_MAPPER[model_name]
+    model_input_handler(ctx, inputs)
+
 
 
 class Txt2Image(foo.Operator):
@@ -219,10 +462,9 @@ class Txt2Image(foo.Operator):
 
         radio_choices = types.RadioGroup()
         if replicate_flag:
-            radio_choices.add_choice("sd", label="Stable Diffusion")
-            radio_choices.add_choice("vqgan-clip", label="VQGAN-CLIP")
+            _add_replicate_choices(radio_choices)
         if openai_flag:
-            radio_choices.add_choice("dalle2", label="DALL-E2")
+            _add_openai_choices(radio_choices)
         inputs.enum(
             "model_choices",
             radio_choices.values(),
@@ -231,65 +473,8 @@ class Txt2Image(foo.Operator):
             view=radio_choices,
         )
 
-        if ctx.params.get("model_choices", False) == "sd":
-            size_choices = SD_SIZE_CHOICES
-            width_choices = types.Dropdown(label="Width")
-            for size in size_choices:
-                width_choices.add_choice(size, label=size)
-
-            inputs.enum(
-                "width_choices",
-                width_choices.values(),
-                default="512",
-                view=width_choices,
-            )
-
-            height_choices = types.Dropdown(label="Height")
-            for size in size_choices:
-                height_choices.add_choice(size, label=size)
-
-            inputs.enum(
-                "height_choices",
-                height_choices.values(),
-                default="512",
-                view=height_choices,
-            )
-
-            inference_steps_slider = types.SliderView(
-                label="Num Inference Steps",
-                componentsProps={"slider": {"min": 1, "max": 500, "step": 1}},
-            )
-            inputs.int(
-                "inference_steps", default=50, view=inference_steps_slider
-            )
-
-            scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
-            for scheduler in SD_SCHEDULER_CHOICES:
-                scheduler_choices_dropdown.add_choice(
-                    scheduler, label=scheduler
-                )
-
-            inputs.enum(
-                "scheduler_choices",
-                scheduler_choices_dropdown.values(),
-                default="K_EULER",
-                view=scheduler_choices_dropdown,
-            )
-
-        elif ctx.params.get("model_choices", False) == "dalle2":
-
-            size_choices_dropdown = types.Dropdown(label="Size")
-            for size in DALLE2_SIZE_CHOICES:
-                size_choices_dropdown.add_choice(size, label=size)
-
-            inputs.enum(
-                "size_choices",
-                size_choices_dropdown.values(),
-                default="512x512",
-                view=size_choices_dropdown,
-            )
-
         inputs.str("prompt", label="Prompt", required=True)
+        _handle_input(ctx, inputs)
         return types.Property(inputs)
 
     def execute(self, ctx):
