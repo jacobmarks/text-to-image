@@ -257,9 +257,10 @@ def set_config(sample, ctx, model_name):
 
 
 def generate_filepath(ctx):
-    download_dir = ctx.params.get("download_dir", {}).get(
-        "absolute_path", "/tmp"
-    )
+    download_dir = ctx.params.get("download_dir", {})
+    if type(download_dir) == dict:
+        download_dir = download_dir.get("absolute_path", "/tmp")
+
     filename = str(uuid.uuid4())[:13].replace("-", "") + ".png"
     return os.path.join(download_dir, filename)
 
