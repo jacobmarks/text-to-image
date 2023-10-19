@@ -192,11 +192,13 @@ def generate_filepath(dataset):
 class Txt2Image(foo.Operator):
     @property
     def config(self):
-        return foo.OperatorConfig(
+        _config = foo.OperatorConfig(
             name="txt2img",
             label="AI Art Gallery: Generate Image from Text",
             dynamic=True,
         )
+        _config.icon = "/assets/icon.svg"
+        return _config
 
     def resolve_input(self, ctx):
         inputs = types.Object()
