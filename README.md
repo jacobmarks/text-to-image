@@ -2,6 +2,12 @@
 
 ![ai_art_gallery_txt2img](https://github.com/jacobmarks/ai-art-gallery/assets/12500356/23872da5-b722-4c34-b49f-b72fcfc7cdb7)
 
+### Updates
+
+- **2023-10-18**: Added support for SDXL, operator icon, and download location selection
+
+### Plugin Overview
+
 This plugin is a Python plugin that allows you to generate images from text
 prompts and add them directly into your dataset.
 
