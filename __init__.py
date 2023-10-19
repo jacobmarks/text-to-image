@@ -256,14 +256,12 @@ def set_config(sample, ctx, model_name):
     config_setter(sample, ctx)
 
 
-def generate_filepath(dataset):
-    if dataset.count() == 0:
-        base_dir = "/tmp"
-    else:
-        path = dataset.first().filepath
-        base_dir = "/".join(path.split("/")[:-1])
+def generate_filepath(ctx):
+    download_dir = ctx.params.get("download_dir", {}).get(
+        "absolute_path", "/tmp"
+    )
     filename = str(uuid.uuid4())[:13].replace("-", "") + ".png"
-    return os.path.join(base_dir, filename)
+    return os.path.join(download_dir, filename)
 
 
 #### MODEL CHOICES ####
@@ -418,6 +416,25 @@ def _handle_input(ctx, inputs):
     model_input_handler(ctx, inputs)
 
 
+def _resolve_download_dir(ctx, inputs):
+    if len(ctx.dataset) == 0:
+        file_explorer = types.FileExplorerView(
+            choose_dir=True,
+            button_label="Choose a directory...",
+        )
+        inputs.file(
+            "download_dir",
+            required=True,
+            description="Choose a location to store downloaded images",
+            view=file_explorer,
+        )
+    else:
+        base_dir = os.path.dirname(ctx.dataset.first().filepath).split("/")[
+            :-1
+        ]
+        ctx.params["download_dir"] = "/".join(base_dir)
+
+
 class Txt2Image(foo.Operator):
     @property
     def config(self):
@@ -431,12 +448,7 @@ class Txt2Image(foo.Operator):
 
     def resolve_input(self, ctx):
         inputs = types.Object()
-        if len(ctx.dataset) == 0:
-            warning = types.Warning(
-                label="Warning",
-                description="The dataset is empty, so downloaded files will be stored in '/tmp.'",
-            )
-            inputs.view("warning", warning)
+        _resolve_download_dir(ctx, inputs)
 
         replicate_flag = allows_replicate_models()
         openai_flag = allows_openai_models()
@@ -470,11 +482,11 @@ class Txt2Image(foo.Operator):
         prompt = ctx.params.get("prompt", "None provided")
         image_url = model.generate_image(ctx)
 
-        filename = generate_filepath(ctx.dataset)
-        download_image(image_url, filename)
+        filepath = generate_filepath(ctx)
+        download_image(image_url, filepath)
 
         sample = fo.Sample(
-            filepath=filename,
+            filepath=filepath,
             tags=["generated"],
             model=model.name,
             prompt=prompt,
