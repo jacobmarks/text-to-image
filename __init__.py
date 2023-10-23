@@ -63,6 +63,9 @@ SDXL_REFINE_MAP = {
 }
 
 
+LC_MODEL_URL = "luosiallen/latent-consistency-model:553803fd018b3cf875a8bc774c99da9b33f36647badfd88a6eec90d61c5f62fc"
+
+
 VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee48f5f7f5c0b6e56493d7cf55f74d02f144d8"
 
 DALLE2_SIZE_CHOICES = ("256x256", "512x512", "1024x1024")
@@ -170,6 +173,37 @@ class SDXL(Text2Image):
         return response
 
 
+class LatentConsistencyModel(Text2Image):
+    """Wrapper for a Latent Consistency model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "latent-consistency"
+        self.model_name = LC_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        width = int(ctx.params.get("width", 768))
+        height = int(ctx.params.get("height", 768))
+        num_inf_steps = int(ctx.params.get("num_inference_steps", 8))
+        guide_scale = float(ctx.params.get("guidance_scale", 7.5))
+
+        response = replicate.run(
+            self.model_name,
+            input={
+                "prompt": prompt,
+                "width": width,
+                "height": height,
+                "num_inference_steps": num_inf_steps,
+                "guidance_scale": guide_scale,
+            },
+        )
+
+        if type(response) == list:
+            response = response[0]
+        return response
+
+
 class DALLE2(Text2Image):
     """Wrapper for a DALL-E 2 model."""
 
@@ -205,6 +239,7 @@ def get_model(model_name):
     mapping = {
         "sd": StableDiffusion,
         "sdxl": SDXL,
+        "latent-consistency": LatentConsistencyModel,
         "dalle2": DALLE2,
         "vqgan-clip": VQGANCLIP,
     }
@@ -234,6 +269,15 @@ def set_sdxl_config(sample, ctx):
     )
 
 
+def set_latent_consistency_config(sample, ctx):
+    sample["latent_consistency_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get("num_inference_steps", 8),
+        guidance_scale=ctx.params.get("guidance_scale", 7.5),
+        width=ctx.params.get("width", 768),
+        height=ctx.params.get("height", 768),
+    )
+
+
 def set_vqgan_clip_config(sample, ctx):
     return
 
@@ -248,6 +292,7 @@ def set_config(sample, ctx, model_name):
     mapping = {
         "sd": set_stable_diffusion_config,
         "sdxl": set_sdxl_config,
+        "latent-consistency": set_latent_consistency_config,
         "dalle2": set_dalle2_config,
         "vqgan-clip": set_vqgan_clip_config,
     }
@@ -269,6 +314,7 @@ def generate_filepath(ctx):
 def _add_replicate_choices(model_choices):
     model_choices.add_choice("sd", label="Stable Diffusion")
     model_choices.add_choice("sdxl", label="SDXL")
+    model_choices.add_choice("latent-consistency", label="Latent Consistency")
     model_choices.add_choice("vqgan-clip", label="VQGAN-CLIP")
 
 
@@ -384,6 +430,25 @@ def _handle_sdxl_input(ctx, inputs):
         )
 
 
+#### LATENT CONSISTENCY INPUTS ####
+def _handle_latent_consistency_input(ctx, inputs):
+
+    inputs.int("width", label="Width", default=768)
+    inputs.int("height", label="Height", default=768)
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 50, "step": 1}},
+    )
+    inputs.int("num_inference_steps", default=8, view=inference_steps_slider)
+
+    guidance_scale_slider = types.SliderView(
+        label="Guidance Scale",
+        componentsProps={"slider": {"min": 0.0, "max": 10.0, "step": 0.1}},
+    )
+    inputs.float("guidance_scale", default=7.5, view=guidance_scale_slider)
+
+
 #### DALLE2 INPUTS ####
 def _handle_dalle2_input(ctx, inputs):
     size_choices_dropdown = types.Dropdown(label="Size")
@@ -406,6 +471,7 @@ def _handle_vqgan_clip_input(ctx, inputs):
 INPUT_MAPPER = {
     "sd": _handle_stable_diffusion_input,
     "sdxl": _handle_sdxl_input,
+    "latent-consistency": _handle_latent_consistency_input,
     "dalle2": _handle_dalle2_input,
     "vqgan-clip": _handle_vqgan_clip_input,
 }
@@ -460,20 +526,26 @@ class Txt2Image(foo.Operator):
             )
             return types.Property(inputs)
 
-        radio_choices = types.RadioGroup()
+        model_choices = types.Dropdown()
         if replicate_flag:
-            _add_replicate_choices(radio_choices)
+            _add_replicate_choices(model_choices)
         if openai_flag:
-            _add_openai_choices(radio_choices)
+            _add_openai_choices(model_choices)
         inputs.enum(
             "model_choices",
-            radio_choices.values(),
-            default=radio_choices.choices[0].value,
-            label="Models",
-            view=radio_choices,
+            model_choices.values(),
+            default=model_choices.choices[0].value,
+            label="Model",
+            description="Choose a model to generate images",
+            view=model_choices,
         )
 
-        inputs.str("prompt", label="Prompt", required=True)
+        inputs.str(
+            "prompt",
+            label="Prompt",
+            description="The prompt to generate an image from",
+            required=True,
+        )
         _handle_input(ctx, inputs)
         return types.Property(inputs)
 
