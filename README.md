@@ -5,6 +5,7 @@
 ### Updates
 
 - **2023-10-18**: Added support for SDXL, operator icon, and download location selection
+- **2021-10-23**: Added support for Latent Consistency Model
 
 ### Plugin Overview
 
@@ -27,6 +28,7 @@ This version of the plugin supports the following models:
 
 - [SDXL](https://replicate.com/stability-ai/sdxl)
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
+- [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
 - [DALL-E2](https://openai.com/dall-e-2)
 - [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 
