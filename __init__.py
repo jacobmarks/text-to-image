@@ -65,7 +65,6 @@ SDXL_REFINE_MAP = {
 
 LC_MODEL_URL = "luosiallen/latent-consistency-model:553803fd018b3cf875a8bc774c99da9b33f36647badfd88a6eec90d61c5f62fc"
 
-
 VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee48f5f7f5c0b6e56493d7cf55f74d02f144d8"
 
 DALLE2_SIZE_CHOICES = ("256x256", "512x512", "1024x1024")
