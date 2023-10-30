@@ -4,8 +4,9 @@
 
 ### Updates
 
-- **2023-10-18**: Added support for SDXL, operator icon, and download location selection
+- **2021-10-30**: Added support for Segmind Stable Diffusion (SSD-1B) Model
 - **2021-10-23**: Added support for Latent Consistency Model
+- **2023-10-18**: Added support for SDXL, operator icon, and download location selection
 
 ### Plugin Overview
 
@@ -28,6 +29,7 @@ This version of the plugin supports the following models:
 
 - [SDXL](https://replicate.com/stability-ai/sdxl)
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
+- [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
 - [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
 - [DALL-E2](https://openai.com/dall-e-2)
 - [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
@@ -40,7 +42,7 @@ It is straightforward to add support for other models!
 fiftyone plugins download https://github.com/jacobmarks/ai-art-gallery
 ```
 
-If you want to use Replicate models (Stable Diffusion and VQGAN-CLIP), you will
+If you want to use Replicate models, you will
 need to `pip install replicate` and set the environment variable
 `REPLICATE_API_TOKEN` with your API token.
 

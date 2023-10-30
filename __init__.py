@@ -62,6 +62,16 @@ SDXL_REFINE_MAP = {
     "Base": "base_image_refiner",
 }
 
+SSD1B_MODEL_URL = "lucataco/ssd-1b:1ee85ef681d5ad3d6870b9da1a4543cb3ad702d036fa5b5210f133b83b05a780"
+SSD1B_SCHEDULER_CHOICES = (
+    "DDIM",
+    "DDPMSolverMultistep",
+    "HeunDiscrete",
+    "KarrasDPM",
+    "K_EULER_ANCESTRAL",
+    "K_EULER",
+    "PNDM",
+)
 
 LC_MODEL_URL = "luosiallen/latent-consistency-model:553803fd018b3cf875a8bc774c99da9b33f36647badfd88a6eec90d61c5f62fc"
 
@@ -172,6 +182,39 @@ class SDXL(Text2Image):
         return response
 
 
+class SSD1B(Text2Image):
+    """Wrapper for a SSD-1B model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "ssd-1b"
+        self.model_name = SSD1B_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        inference_steps = ctx.params.get("inference_steps", 25.0)
+        scheduler = ctx.params.get("scheduler_choices", "None provided")
+        guidance_scale = ctx.params.get("guidance_scale", 7.5)
+        negative_prompt = ctx.params.get("negative_prompt", None)
+
+        _inputs = {
+            "prompt": prompt,
+            "inference_steps": inference_steps,
+            "scheduler": scheduler,
+            "guidance_scale": guidance_scale,
+        }
+        if negative_prompt is not None:
+            _inputs["negative_prompt"] = negative_prompt
+
+        response = replicate.run(
+            self.model_name,
+            input=_inputs,
+        )
+        if type(response) == list:
+            response = response[0]
+        return response
+
+
 class LatentConsistencyModel(Text2Image):
     """Wrapper for a Latent Consistency model."""
 
@@ -238,6 +281,7 @@ def get_model(model_name):
     mapping = {
         "sd": StableDiffusion,
         "sdxl": SDXL,
+        "ssd-1b": SSD1B,
         "latent-consistency": LatentConsistencyModel,
         "dalle2": DALLE2,
         "vqgan-clip": VQGANCLIP,
@@ -268,6 +312,15 @@ def set_sdxl_config(sample, ctx):
     )
 
 
+def set_ssd1b_config(sample, ctx):
+    sample["ssd1b_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get("inference_steps", "None provided"),
+        scheduler=ctx.params.get("scheduler_choices", "None provided"),
+        guidance_scale=ctx.params.get("guidance_scale", 7.5),
+        negative_prompt=ctx.params.get("negative_prompt", None),
+    )
+
+
 def set_latent_consistency_config(sample, ctx):
     sample["latent_consistency_config"] = fo.DynamicEmbeddedDocument(
         inference_steps=ctx.params.get("num_inference_steps", 8),
@@ -291,6 +344,7 @@ def set_config(sample, ctx, model_name):
     mapping = {
         "sd": set_stable_diffusion_config,
         "sdxl": set_sdxl_config,
+        "ssd-1b": set_ssd1b_config,
         "latent-consistency": set_latent_consistency_config,
         "dalle2": set_dalle2_config,
         "vqgan-clip": set_vqgan_clip_config,
@@ -313,6 +367,7 @@ def generate_filepath(ctx):
 def _add_replicate_choices(model_choices):
     model_choices.add_choice("sd", label="Stable Diffusion")
     model_choices.add_choice("sdxl", label="SDXL")
+    model_choices.add_choice("ssd-1b", label="SSD-1B")
     model_choices.add_choice("latent-consistency", label="Latent Consistency")
     model_choices.add_choice("vqgan-clip", label="VQGAN-CLIP")
 
@@ -429,6 +484,36 @@ def _handle_sdxl_input(ctx, inputs):
         )
 
 
+#### SSD-1B INPUTS ####
+def _handle_ssd1b_input(ctx, inputs):
+    inputs.int("width", label="Width", default=768)
+    inputs.int("height", label="Height", default=768)
+    inputs.str("negative_prompt", label="Negative Prompt", required=False)
+
+    scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
+    for scheduler in SSD1B_SCHEDULER_CHOICES:
+        scheduler_choices_dropdown.add_choice(scheduler, label=scheduler)
+
+    inputs.enum(
+        "scheduler_choices",
+        scheduler_choices_dropdown.values(),
+        default="K_EULER",
+        view=scheduler_choices_dropdown,
+    )
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 100, "step": 1}},
+    )
+    inputs.int("inference_steps", default=25, view=inference_steps_slider)
+
+    guidance_scale_slider = types.SliderView(
+        label="Guidance Scale",
+        componentsProps={"slider": {"min": 0.0, "max": 10.0, "step": 0.1}},
+    )
+    inputs.float("guidance_scale", default=7.5, view=guidance_scale_slider)
+
+
 #### LATENT CONSISTENCY INPUTS ####
 def _handle_latent_consistency_input(ctx, inputs):
 
@@ -470,6 +555,7 @@ def _handle_vqgan_clip_input(ctx, inputs):
 INPUT_MAPPER = {
     "sd": _handle_stable_diffusion_input,
     "sdxl": _handle_sdxl_input,
+    "ssd-1b": _handle_ssd1b_input,
     "latent-consistency": _handle_latent_consistency_input,
     "dalle2": _handle_dalle2_input,
     "vqgan-clip": _handle_vqgan_clip_input,
