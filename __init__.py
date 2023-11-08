@@ -261,10 +261,10 @@ class DALLE2(Text2Image):
         prompt = ctx.params.get("prompt", "None provided")
         size = ctx.params.get("size_choices", "None provided")
 
-        response = openai.Image.create(
+        response = openai.OpenAI().images.generate(
             model="dall-e-2", prompt=prompt, n=1, size=size
         )
-        return response["data"][0]["url"]
+        return response.data[0].url
 
 
 class DALLE3(Text2Image):
@@ -279,10 +279,14 @@ class DALLE3(Text2Image):
         size = ctx.params.get("size_choices", "None provided")
         quality = ctx.params.get("quality_choices", "None provided")
 
-        response = openai.Image.create(
+        response = openai.OpenAI().images.generate(
             model="dall-e-3", prompt=prompt, n=1, quality=quality, size=size
         )
-        return response["data"][0]["url"]
+
+        revised_prompt = response.data[0].revised_prompt
+        ctx.params["revised_prompt"] = revised_prompt
+
+        return response.data[0].url
 
 
 class VQGANCLIP(Text2Image):
@@ -369,6 +373,7 @@ def set_dalle3_config(sample, ctx):
     sample["dalle3_config"] = fo.DynamicEmbeddedDocument(
         size=ctx.params.get("size_choices", "None provided"),
         quality=ctx.params.get("quality_choices", "None provided"),
+        revised_prompt=ctx.params.get("revised_prompt", "None provided"),
     )
 
 
