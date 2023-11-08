@@ -4,6 +4,7 @@
 
 ### Updates
 
+- **2021-11-08**: Version 1.1.0 adds support for DALLE-3 Model — upgrade to `openai>=1.1.0` to use 😄
 - **2021-10-30**: Added support for Segmind Stable Diffusion (SSD-1B) Model
 - **2021-10-23**: Added support for Latent Consistency Model
 - **2023-10-18**: Added support for SDXL, operator icon, and download location selection
@@ -32,6 +33,7 @@ This version of the plugin supports the following models:
 - [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
 - [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
 - [DALL-E2](https://openai.com/dall-e-2)
+- [DALL-E3](https://openai.com/dall-e-3)
 - [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 
 It is straightforward to add support for other models!
@@ -46,7 +48,7 @@ If you want to use Replicate models, you will
 need to `pip install replicate` and set the environment variable
 `REPLICATE_API_TOKEN` with your API token.
 
-If you want to use DALL-E2, you will need to `pip install openai` and set the
+If you want to use DALL-E2 or DALL-E3, you will need to `pip install openai` and set the
 environment variable `OPENAI_API_KEY` with your API key.
 
 Refer to the [main README](https://github.com/voxel51/fiftyone-plugins) for
