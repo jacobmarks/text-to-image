@@ -1,4 +1,4 @@
-## AI Art Gallery Plugin
+## Text-to-Image Plugin
 
 ![ssd1b](https://github.com/jacobmarks/ai-art-gallery/assets/12500356/f5202d68-c5c1-44c7-b662-98d98e5c05aa)
 
@@ -13,13 +13,6 @@
 
 This plugin is a Python plugin that allows you to generate images from text
 prompts and add them directly into your dataset.
-
-It demonstrates how to do the following:
-
-- use Python to create an operator with different options depending on user
-  choices
-- use `componentProps` to customize the UI
-- download images from URL and add them to the dataset
 
 :warning: This plugin is only verified to work for local datasets. It may not
 work for remote datasets.
@@ -37,6 +30,10 @@ This version of the plugin supports the following models:
 - [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 
 It is straightforward to add support for other models!
+
+## Watch On Youtube
+
+[![Video Thumbnail](https://img.youtube.com/vi/qJNEyC_FqG0/0.jpg)](https://www.youtube.com/watch?v=qJNEyC_FqG0&list=PLuREAXoPgT0RZrUaT0UpX_HzwKkoB-S9j&index=2)
 
 ## Installation
 
