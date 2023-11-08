@@ -79,6 +79,10 @@ VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee4
 
 DALLE2_SIZE_CHOICES = ("256x256", "512x512", "1024x1024")
 
+DALLE3_SIZE_CHOICES = ("1024x1024", "1024x1792", "1792x1024")
+
+DALLE3_QUALITY_CHOICES = ("standard", "hd")
+
 
 def allows_replicate_models():
     """Returns whether the current environment allows replicate models."""
@@ -251,13 +255,33 @@ class DALLE2(Text2Image):
 
     def __init__(self):
         super().__init__()
-        self.name = "dalle-2"
+        self.name = "dalle2"
 
     def generate_image(self, ctx):
         prompt = ctx.params.get("prompt", "None provided")
         size = ctx.params.get("size_choices", "None provided")
 
-        response = openai.Image.create(prompt=prompt, n=1, size=size)
+        response = openai.Image.create(
+            model="dall-e-2", prompt=prompt, n=1, size=size
+        )
+        return response["data"][0]["url"]
+
+
+class DALLE3(Text2Image):
+    """Wrapper for a DALL-E 3 model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "dalle3"
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        size = ctx.params.get("size_choices", "None provided")
+        quality = ctx.params.get("quality_choices", "None provided")
+
+        response = openai.Image.create(
+            model="dall-e-3", prompt=prompt, n=1, quality=quality, size=size
+        )
         return response["data"][0]["url"]
 
 
@@ -284,6 +308,7 @@ def get_model(model_name):
         "ssd-1b": SSD1B,
         "latent-consistency": LatentConsistencyModel,
         "dalle2": DALLE2,
+        "dalle3": DALLE3,
         "vqgan-clip": VQGANCLIP,
     }
     return mapping[model_name]()
@@ -340,6 +365,13 @@ def set_dalle2_config(sample, ctx):
     )
 
 
+def set_dalle3_config(sample, ctx):
+    sample["dalle3_config"] = fo.DynamicEmbeddedDocument(
+        size=ctx.params.get("size_choices", "None provided"),
+        quality=ctx.params.get("quality_choices", "None provided"),
+    )
+
+
 def set_config(sample, ctx, model_name):
     mapping = {
         "sd": set_stable_diffusion_config,
@@ -347,6 +379,7 @@ def set_config(sample, ctx, model_name):
         "ssd-1b": set_ssd1b_config,
         "latent-consistency": set_latent_consistency_config,
         "dalle2": set_dalle2_config,
+        "dalle3": set_dalle3_config,
         "vqgan-clip": set_vqgan_clip_config,
     }
 
@@ -374,6 +407,7 @@ def _add_replicate_choices(model_choices):
 
 def _add_openai_choices(model_choices):
     model_choices.add_choice("dalle2", label="DALL-E2")
+    model_choices.add_choice("dalle3", label="DALL-E3")
 
 
 #### STABLE DIFFUSION INPUTS ####
@@ -547,6 +581,31 @@ def _handle_dalle2_input(ctx, inputs):
     )
 
 
+#### DALLE3 INPUTS ####
+def _handle_dalle3_input(ctx, inputs):
+    size_choices_dropdown = types.Dropdown(label="Size")
+    for size in DALLE3_SIZE_CHOICES:
+        size_choices_dropdown.add_choice(size, label=size)
+
+    inputs.enum(
+        "size_choices",
+        size_choices_dropdown.values(),
+        default="1024x1024",
+        view=size_choices_dropdown,
+    )
+
+    quality_choices_dropdown = types.Dropdown(label="Quality")
+    for quality in DALLE3_QUALITY_CHOICES:
+        quality_choices_dropdown.add_choice(quality, label=quality)
+
+    inputs.enum(
+        "quality_choices",
+        quality_choices_dropdown.values(),
+        default="standard",
+        view=quality_choices_dropdown,
+    )
+
+
 #### VQGAN-CLIP INPUTS ####
 def _handle_vqgan_clip_input(ctx, inputs):
     return
@@ -558,6 +617,7 @@ INPUT_MAPPER = {
     "ssd-1b": _handle_ssd1b_input,
     "latent-consistency": _handle_latent_consistency_input,
     "dalle2": _handle_dalle2_input,
+    "dalle3": _handle_dalle3_input,
     "vqgan-clip": _handle_vqgan_clip_input,
 }
 
