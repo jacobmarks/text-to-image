@@ -233,6 +233,7 @@ class LatentConsistencyModel(Text2Image):
         height = int(ctx.params.get("height", 768))
         num_inf_steps = int(ctx.params.get("num_inference_steps", 8))
         guide_scale = float(ctx.params.get("guidance_scale", 7.5))
+        lcm_origin_steps = int(ctx.params.get("lcm_origin_steps", 50))
 
         response = replicate.run(
             self.model_name,
@@ -242,6 +243,7 @@ class LatentConsistencyModel(Text2Image):
                 "height": height,
                 "num_inference_steps": num_inf_steps,
                 "guidance_scale": guide_scale,
+                "lcm_origin_steps": lcm_origin_steps,
             },
         )
 
@@ -354,6 +356,7 @@ def set_latent_consistency_config(sample, ctx):
     sample["latent_consistency_config"] = fo.DynamicEmbeddedDocument(
         inference_steps=ctx.params.get("num_inference_steps", 8),
         guidance_scale=ctx.params.get("guidance_scale", 7.5),
+        lcm_origin_steps=ctx.params.get("lcm_origin_steps", 50),
         width=ctx.params.get("width", 768),
         height=ctx.params.get("height", 768),
     )
@@ -564,6 +567,12 @@ def _handle_latent_consistency_input(ctx, inputs):
         componentsProps={"slider": {"min": 1, "max": 50, "step": 1}},
     )
     inputs.int("num_inference_steps", default=8, view=inference_steps_slider)
+
+    lcm_origin_steps_slider = types.SliderView(
+        label="LCM Origin Steps",
+        componentsProps={"slider": {"min": 1, "max": 100, "step": 1}},
+    )
+    inputs.int("lcm_origin_steps", default=50, view=lcm_origin_steps_slider)
 
     guidance_scale_slider = types.SliderView(
         label="Guidance Scale",
