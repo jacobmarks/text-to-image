@@ -381,11 +381,11 @@ def set_ssd1b_config(sample, ctx):
 
 def set_latent_consistency_config(sample, ctx):
     sample["latent_consistency_config"] = fo.DynamicEmbeddedDocument(
-        inference_steps=ctx.params.get("num_inference_steps", 8),
+        inference_steps=ctx.params.get("num_inference_steps", 4),
         guidance_scale=ctx.params.get("guidance_scale", 7.5),
         lcm_origin_steps=ctx.params.get("lcm_origin_steps", 50),
-        width=ctx.params.get("width", 768),
-        height=ctx.params.get("height", 768),
+        width=ctx.params.get("width", 512),
+        height=ctx.params.get("height", 512),
     )
 
 
@@ -716,6 +716,15 @@ def _resolve_download_dir(ctx, inputs):
         ctx.params["download_dir"] = "/".join(base_dir)
 
 
+def _handle_calling(uri, sample_collection, prompt, model_name, **kwargs):
+    ctx = dict(view=sample_collection.view())
+    params = dict(kwargs)
+    params["prompt"] = prompt
+    params["model_choices"] = model_name
+
+    return foo.execute_operator(uri, ctx, params=params)
+
+
 class Txt2Image(foo.Operator):
     @property
     def config(self):
@@ -805,6 +814,14 @@ class Txt2Image(foo.Operator):
             ctx.trigger("reload_dataset")
         else:
             ctx.trigger("reload_samples")
+
+    def list_models(self):
+        return list(INPUT_MAPPER.keys())
+
+    def __call__(self, sample_collection, prompt, model_name, **kwargs):
+        _handle_calling(
+            self.uri, sample_collection, prompt, model_name, **kwargs
+        )
 
 
 def register(plugin):
