@@ -9,11 +9,14 @@ from datetime import datetime
 import os
 import uuid
 from importlib.util import find_spec
+from importlib.metadata import version as mversion
+from packaging import version as pversion
 
 import fiftyone.operators as foo
 from fiftyone.operators import types
 import fiftyone as fo
 import fiftyone.core.utils as fou
+from fiftyone.core.utils import add_sys_path
 
 import requests
 
@@ -95,6 +98,14 @@ def allows_replicate_models():
 def allows_openai_models():
     """Returns whether the current environment allows openai models."""
     return find_spec("openai") is not None and "OPENAI_API_KEY" in os.environ
+
+
+def allows_diffusers_models():
+    """Returns whether the current environment allows diffusers models."""
+    if find_spec("diffusers") is None:
+        return False
+    version = mversion("diffusers")
+    return pversion.parse(version) >= pversion.parse("0.24.0")
 
 
 def download_image(image_url, filename):
@@ -229,27 +240,43 @@ class LatentConsistencyModel(Text2Image):
 
     def generate_image(self, ctx):
         prompt = ctx.params.get("prompt", "None provided")
-        width = int(ctx.params.get("width", 768))
-        height = int(ctx.params.get("height", 768))
-        num_inf_steps = int(ctx.params.get("num_inference_steps", 8))
+        width = int(ctx.params.get("width", 512))
+        height = int(ctx.params.get("height", 512))
+        num_inf_steps = int(ctx.params.get("num_inference_steps", 4))
         guide_scale = float(ctx.params.get("guidance_scale", 7.5))
         lcm_origin_steps = int(ctx.params.get("lcm_origin_steps", 50))
+        distro = ctx.params.get("model_distribution", "None provided")
 
-        response = replicate.run(
-            self.model_name,
-            input={
-                "prompt": prompt,
-                "width": width,
-                "height": height,
-                "num_inference_steps": num_inf_steps,
-                "guidance_scale": guide_scale,
-                "lcm_origin_steps": lcm_origin_steps,
-            },
-        )
+        if distro == "replicate":
+            response = replicate.run(
+                self.model_name,
+                input={
+                    "prompt": prompt,
+                    "width": width,
+                    "height": height,
+                    "num_inference_steps": num_inf_steps,
+                    "guidance_scale": guide_scale,
+                    "lcm_origin_steps": lcm_origin_steps,
+                },
+            )
 
-        if type(response) == list:
-            response = response[0]
-        return response
+            if type(response) == list:
+                response = response[0]
+            return response
+        else:
+            with add_sys_path(os.path.dirname(os.path.abspath(__file__))):
+                # pylint: disable=no-name-in-module,import-error
+                from local_t2i_models import lcm
+
+            response = lcm(
+                prompt,
+                width,
+                height,
+                num_inf_steps,
+                guide_scale,
+                lcm_origin_steps,
+            )
+            return response
 
 
 class DALLE2(Text2Image):
@@ -409,13 +436,23 @@ def _add_replicate_choices(model_choices):
     model_choices.add_choice("sd", label="Stable Diffusion")
     model_choices.add_choice("sdxl", label="SDXL")
     model_choices.add_choice("ssd-1b", label="SSD-1B")
-    model_choices.add_choice("latent-consistency", label="Latent Consistency")
+    if "latent-consistency" not in model_choices.values():
+        model_choices.add_choice(
+            "latent-consistency", label="Latent Consistency"
+        )
     model_choices.add_choice("vqgan-clip", label="VQGAN-CLIP")
 
 
 def _add_openai_choices(model_choices):
     model_choices.add_choice("dalle2", label="DALL-E2")
     model_choices.add_choice("dalle3", label="DALL-E3")
+
+
+def _add_diffusers_choices(model_choices):
+    if "latent-consistency" not in model_choices.values():
+        model_choices.add_choice(
+            "latent-consistency", label="Latent Consistency"
+        )
 
 
 #### STABLE DIFFUSION INPUTS ####
@@ -559,14 +596,32 @@ def _handle_ssd1b_input(ctx, inputs):
 #### LATENT CONSISTENCY INPUTS ####
 def _handle_latent_consistency_input(ctx, inputs):
 
-    inputs.int("width", label="Width", default=768)
-    inputs.int("height", label="Height", default=768)
+    replicate_flag = allows_replicate_models()
+    diffusers_flag = allows_diffusers_models()
+
+    if not replicate_flag:
+        ctx.params["model_distribution"] = "diffusers"
+    elif not diffusers_flag:
+        ctx.params["model_distribution"] = "replicate"
+    else:
+        model_distribution_choices = types.Dropdown(label="Model Distribution")
+        model_distribution_choices.add_choice("diffusers", label="Diffusers")
+        model_distribution_choices.add_choice("replicate", label="Replicate")
+        inputs.enum(
+            "model_distribution",
+            model_distribution_choices.values(),
+            default="diffusers",
+            view=model_distribution_choices,
+        )
+
+    inputs.int("width", label="Width", default=512)
+    inputs.int("height", label="Height", default=512)
 
     inference_steps_slider = types.SliderView(
         label="Num Inference Steps",
         componentsProps={"slider": {"min": 1, "max": 50, "step": 1}},
     )
-    inputs.int("num_inference_steps", default=8, view=inference_steps_slider)
+    inputs.int("num_inference_steps", default=4, view=inference_steps_slider)
 
     lcm_origin_steps_slider = types.SliderView(
         label="LCM Origin Steps",
@@ -678,10 +733,17 @@ class Txt2Image(foo.Operator):
 
         replicate_flag = allows_replicate_models()
         openai_flag = allows_openai_models()
-        if not replicate_flag and not openai_flag:
+        diffusers_flag = allows_diffusers_models()
+
+        any_flag = replicate_flag or openai_flag or diffusers_flag
+        if not any_flag:
             inputs.message(
                 "message",
-                label="No models available. Please set up your environment variables.",
+                label="No models available.",
+                descriptions=(
+                    "You must install one of `replicate`, `openai`, of `diffusers`",
+                    " to use this plugin. ",
+                ),
             )
             return types.Property(inputs)
 
@@ -690,6 +752,8 @@ class Txt2Image(foo.Operator):
             _add_replicate_choices(model_choices)
         if openai_flag:
             _add_openai_choices(model_choices)
+        if diffusers_flag:
+            _add_diffusers_choices(model_choices)
         inputs.enum(
             "model_choices",
             model_choices.values(),
@@ -712,10 +776,17 @@ class Txt2Image(foo.Operator):
         model_name = ctx.params.get("model_choices", "None provided")
         model = get_model(model_name)
         prompt = ctx.params.get("prompt", "None provided")
-        image_url = model.generate_image(ctx)
 
+        response = model.generate_image(ctx)
         filepath = generate_filepath(ctx)
-        download_image(image_url, filepath)
+
+        if type(response) == str:
+            ## served models return a url
+            image_url = response
+            download_image(image_url, filepath)
+        else:
+            ## local models return a PIL image
+            response.save(filepath)
 
         sample = fo.Sample(
             filepath=filepath,
