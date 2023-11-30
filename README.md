@@ -38,7 +38,7 @@ It is straightforward to add support for other models!
 ## Installation
 
 ```shell
-fiftyone plugins download https://github.com/jacobmarks/ai-art-gallery
+fiftyone plugins download https://github.com/jacobmarks/text-to-image
 ```
 
 If you want to use Replicate models, you will

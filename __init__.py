@@ -1,4 +1,4 @@
-"""AI Art Gallery plugin.
+"""Text to Image plugin.
 
 | Copyright 2017-2023, Voxel51, Inc.
 | `voxel51.com <https://voxel51.com/>`_
@@ -666,7 +666,7 @@ class Txt2Image(foo.Operator):
     def config(self):
         _config = foo.OperatorConfig(
             name="txt2img",
-            label="AI Art Gallery: Generate Image from Text",
+            label="Text to Image: Generate Image from Text",
             dynamic=True,
         )
         _config.icon = "/assets/icon.svg"
