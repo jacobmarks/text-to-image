@@ -4,6 +4,10 @@
 
 ### Updates
 
+- **2021-11-30**: Version 1.2.0
+  - adds local model running via `diffusers` (>=0.24.0)
+  - adds [calling from the Python SDK](#python-sdk)!
+  - :warning: **BREAKING CHANGE**: the plugin and operator URIs have been changed from `ai_art_gallery` to `text_to_image`. If you have any saved pipelines that use the plugin, you will need to update the URIs.
 - **2021-11-08**: Version 1.1.0 adds support for DALLE-3 Model — upgrade to `openai>=1.1.0` to use 😄
 - **2021-10-30**: Added support for Segmind Stable Diffusion (SSD-1B) Model
 - **2021-10-23**: Added support for Latent Consistency Model
@@ -48,6 +52,10 @@ need to `pip install replicate` and set the environment variable
 If you want to use DALL-E2 or DALL-E3, you will need to `pip install openai` and set the
 environment variable `OPENAI_API_KEY` with your API key.
 
+To run the Latency Consistency model locally with Hugging Face's diffusers library,
+you will need `diffusers>=0.24.0`. If you need to, you can install it with
+`pip install diffusers>=0.24.0`.
+
 Refer to the [main README](https://github.com/voxel51/fiftyone-plugins) for
 more information about managing downloaded plugins and developing plugins
 locally.
@@ -57,3 +65,36 @@ locally.
 ### `txt2img`
 
 - Generates an image from a text prompt and adds it to the dataset
+
+### Python SDK
+
+You can also use the `txt2img` operators from the Python SDK!
+
+⚠️ Due to the way Jupyter Notebooks interact with asyncio, this will not work in a Jupyter Notebook. You will need to run this code in a Python script or in a Python console.
+
+```python
+import fiftyone as fo
+import fiftyone.operators as foo
+import fiftyone.zoo as foz
+
+dataset = fo.load_dataset("quickstart")
+
+## Access the operator via its URI (plugin name + operator name)
+t2i = foo.get_operator("@jacobmarks/text_to_image/txt2img")
+
+## Run the operator
+
+prompt = "A dog sitting in a field"
+t2i(dataset, prompt=prompt, model_name="latent-consistency", delegate=False)
+
+## Pass in model-specific arguments
+t2i(
+    dataset,
+    prompt=prompt,
+    model_name="latent-consistency",
+    delegate=False,
+    width=768,
+    height=768,
+    num_inference_steps=8,
+)
+```

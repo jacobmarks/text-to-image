@@ -1,8 +1,8 @@
 fiftyone:
   version: ">=0.22.0"
-name: "@jacobmarks/ai_art_gallery"
-version: "1.1.0"
-description: "Create your own AI Art Gallery with Text-to-image models and FiftyOne!"
+name: "@jacobmarks/text_to_image"
+version: "1.2.0"
+description: "Run Text-to-image models to add synthetic images directly to your dataset!"
 url: "https://github.com/jacobmarks/text-to-image"
 operators:
   - txt2img
