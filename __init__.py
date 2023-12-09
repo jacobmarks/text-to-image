@@ -710,9 +710,7 @@ def _resolve_download_dir(ctx, inputs):
             view=file_explorer,
         )
     else:
-        base_dir = os.path.dirname(ctx.dataset.first().filepath).split("/")[
-            :-1
-        ]
+        base_dir = os.path.dirname(ctx.dataset.first().filepath).split("/")
         ctx.params["download_dir"] = "/".join(base_dir)
 
 
