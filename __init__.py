@@ -80,6 +80,24 @@ LC_MODEL_URL = "luosiallen/latent-consistency-model:553803fd018b3cf875a8bc774c99
 
 VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee48f5f7f5c0b6e56493d7cf55f74d02f144d8"
 
+KANDINSKY_MODEL_URL = "ai-forever/kandinsky-2.2:ea1addaab376f4dc227f5368bbd8eff901820fd1cc14ed8cad63b29249e9d463"
+KANDINSDKY_SIZE_CHOICES = (
+    "384",
+    "512",
+    "576",
+    "640",
+    "704",
+    "768",
+    "960",
+    "1024",
+    "1152",
+    "1280",
+    "1536",
+    "1792",
+    "2048",
+)
+
+
 DALLE2_SIZE_CHOICES = ("256x256", "512x512", "1024x1024")
 
 DALLE3_SIZE_CHOICES = ("1024x1024", "1024x1792", "1792x1024")
@@ -230,6 +248,42 @@ class SSD1B(Text2Image):
         return response
 
 
+class Kandinsky(Text2Image):
+    """Wrapper for a Kandinsky model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "kandinsky"
+        self.model_name = KANDINSKY_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        negative_prompt = ctx.params.get("negative_prompt", None)
+        width = int(ctx.params.get("width", 512))
+        height = int(ctx.params.get("height", 512))
+        inference_steps = ctx.params.get("inference_steps", 75)
+        inference_steps_prior = ctx.params.get("inference_steps_prior", 25)
+
+        input = {
+            "prompt": prompt,
+            "width": width,
+            "height": height,
+            "inference_steps": inference_steps,
+            "inference_steps_prior": inference_steps_prior,
+        }
+
+        if negative_prompt is not None:
+            input["negative_prompt"] = negative_prompt
+
+        response = replicate.run(
+            self.model_name,
+            input=input,
+        )
+        if type(response) == list:
+            response = response[0]
+        return response
+
+
 class LatentConsistencyModel(Text2Image):
     """Wrapper for a Latent Consistency model."""
 
@@ -340,6 +394,7 @@ def get_model(model_name):
         "sdxl": SDXL,
         "ssd-1b": SSD1B,
         "latent-consistency": LatentConsistencyModel,
+        "kandinsky-2.2": Kandinsky,
         "dalle2": DALLE2,
         "dalle3": DALLE3,
         "vqgan-clip": VQGANCLIP,
@@ -379,6 +434,16 @@ def set_ssd1b_config(sample, ctx):
     )
 
 
+def set_kandinsky_config(sample, ctx):
+    sample["kandinsky_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get("inference_steps", 75),
+        inference_steps_prior=ctx.params.get("inference_steps_prior", 25),
+        width=ctx.params.get("width", 512),
+        height=ctx.params.get("height", 512),
+        negative_prompt=ctx.params.get("negative_prompt", None),
+    )
+
+
 def set_latent_consistency_config(sample, ctx):
     sample["latent_consistency_config"] = fo.DynamicEmbeddedDocument(
         inference_steps=ctx.params.get("num_inference_steps", 4),
@@ -413,6 +478,7 @@ def set_config(sample, ctx, model_name):
         "sdxl": set_sdxl_config,
         "ssd-1b": set_ssd1b_config,
         "latent-consistency": set_latent_consistency_config,
+        "kandinsky-2.2": set_kandinsky_config,
         "dalle2": set_dalle2_config,
         "dalle3": set_dalle3_config,
         "vqgan-clip": set_vqgan_clip_config,
@@ -436,6 +502,7 @@ def _add_replicate_choices(model_choices):
     model_choices.add_choice("sd", label="Stable Diffusion")
     model_choices.add_choice("sdxl", label="SDXL")
     model_choices.add_choice("ssd-1b", label="SSD-1B")
+    model_choices.add_choice("kandinsky-2.2", label="Kandinsky 2.2")
     if "latent-consistency" not in model_choices.values():
         model_choices.add_choice(
             "latent-consistency", label="Latent Consistency"
@@ -593,6 +660,29 @@ def _handle_ssd1b_input(ctx, inputs):
     inputs.float("guidance_scale", default=7.5, view=guidance_scale_slider)
 
 
+#### KANDINSKY INPUTS ####
+def _handle_kandinsky_input(ctx, inputs):
+    inputs.int("width", label="Width", default=512)
+    inputs.int("height", label="Height", default=512)
+    inputs.str("negative_prompt", label="Negative Prompt", required=False)
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 100, "step": 1}},
+    )
+    inputs.int("inference_steps", default=75, view=inference_steps_slider)
+
+    inference_steps_prior_slider = types.SliderView(
+        label="Num Inference Steps Prior",
+        componentsProps={"slider": {"min": 1, "max": 50, "step": 1}},
+    )
+    inputs.int(
+        "inference_steps_prior",
+        default=25,
+        view=inference_steps_prior_slider,
+    )
+
+
 #### LATENT CONSISTENCY INPUTS ####
 def _handle_latent_consistency_input(ctx, inputs):
 
@@ -684,6 +774,7 @@ INPUT_MAPPER = {
     "sd": _handle_stable_diffusion_input,
     "sdxl": _handle_sdxl_input,
     "ssd-1b": _handle_ssd1b_input,
+    "kandinsky-2.2": _handle_kandinsky_input,
     "latent-consistency": _handle_latent_consistency_input,
     "dalle2": _handle_dalle2_input,
     "dalle3": _handle_dalle3_input,

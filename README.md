@@ -4,13 +4,14 @@
 
 ### Updates
 
-- **2021-11-30**: Version 1.2.0
+- **2023-12-19**: Added support for Kandinsky-2.2 Model
+- **2023-11-30**: Version 1.2.0
   - adds local model running via `diffusers` (>=0.24.0)
   - adds [calling from the Python SDK](#python-sdk)!
   - :warning: **BREAKING CHANGE**: the plugin and operator URIs have been changed from `ai_art_gallery` to `text_to_image`. If you have any saved pipelines that use the plugin, you will need to update the URIs.
-- **2021-11-08**: Version 1.1.0 adds support for DALLE-3 Model — upgrade to `openai>=1.1.0` to use 😄
-- **2021-10-30**: Added support for Segmind Stable Diffusion (SSD-1B) Model
-- **2021-10-23**: Added support for Latent Consistency Model
+- **2023-11-08**: Version 1.1.0 adds support for DALLE-3 Model — upgrade to `openai>=1.1.0` to use 😄
+- **2023-10-30**: Added support for Segmind Stable Diffusion (SSD-1B) Model
+- **2023-10-23**: Added support for Latent Consistency Model
 - **2023-10-18**: Added support for SDXL, operator icon, and download location selection
 
 ### Plugin Overview
@@ -28,6 +29,7 @@ This version of the plugin supports the following models:
 - [SDXL](https://replicate.com/stability-ai/sdxl)
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
 - [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
+- [Kandinsky-2.2](https://replicate.com/ai-forever/kandinsky-2.2)
 - [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
 - [DALL-E2](https://openai.com/dall-e-2)
 - [DALL-E3](https://openai.com/dall-e-3)
