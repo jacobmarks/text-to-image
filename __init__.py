@@ -662,8 +662,29 @@ def _handle_ssd1b_input(ctx, inputs):
 
 #### KANDINSKY INPUTS ####
 def _handle_kandinsky_input(ctx, inputs):
-    inputs.int("width", label="Width", default=512)
-    inputs.int("height", label="Height", default=512)
+
+    size_choices = KANDINSDKY_SIZE_CHOICES
+    width_choices = types.Dropdown(label="Width")
+    for size in size_choices:
+        width_choices.add_choice(size, label=size)
+
+    inputs.enum(
+        "width",
+        width_choices.values(),
+        default="512",
+        view=width_choices,
+    )
+
+    height_choices = types.Dropdown(label="Height")
+    for size in size_choices:
+        height_choices.add_choice(size, label=size)
+
+    inputs.enum(
+        "height",
+        height_choices.values(),
+        default="512",
+        view=height_choices,
+    )
     inputs.str("negative_prompt", label="Negative Prompt", required=False)
 
     inference_steps_slider = types.SliderView(
