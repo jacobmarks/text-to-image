@@ -76,6 +76,16 @@ SSD1B_SCHEDULER_CHOICES = (
     "PNDM",
 )
 
+PLAYGROUND_V2_MODEL_URL = "playgroundai/playground-v2-1024px-aesthetic:42fe626e41cc811eaf02c94b892774839268ce1994ea778eba97103fe1ef51b8"
+PLAYGROUND_V2_SCHEDULER_CHOICES = (
+    "DDIM",
+    "DPMSolverMultistep",
+    "HeunDiscrete",
+    "K_EULER_ANCESTRAL",
+    "K_EULER",
+    "PNDM",
+)
+
 LC_MODEL_URL = "luosiallen/latent-consistency-model:553803fd018b3cf875a8bc774c99da9b33f36647badfd88a6eec90d61c5f62fc"
 
 VQGAN_MODEL_URL = "mehdidc/feed_forward_vqgan_clip:28b5242dadb5503688e17738aaee48f5f7f5c0b6e56493d7cf55f74d02f144d8"
@@ -284,6 +294,44 @@ class Kandinsky(Text2Image):
         return response
 
 
+class PlaygroundV2(Text2Image):
+    """Wrapper for Aesthetic Playground V2 model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "playground-v2"
+        self.model_name = PLAYGROUND_V2_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        negative_prompt = ctx.params.get("negative_prompt", None)
+        width = int(ctx.params.get("width", 1024))
+        height = int(ctx.params.get("height", 1024))
+        inference_steps = ctx.params.get("inference_steps", 50)
+        guidance_scale = ctx.params.get("guide_scale", 3.0)
+        scheduler = ctx.params.get("scheduler_choices", "None provided")
+
+        input = {
+            "prompt": prompt,
+            "width": width,
+            "height": height,
+            "num_inference_steps": inference_steps,
+            "guidance_scale": guidance_scale,
+            "scheduler": scheduler,
+        }
+
+        if negative_prompt is not None:
+            input["negative_prompt"] = negative_prompt
+
+        response = replicate.run(
+            self.model_name,
+            input=input,
+        )
+        if type(response) == list:
+            response = response[0]
+        return response
+
+
 class LatentConsistencyModel(Text2Image):
     """Wrapper for a Latent Consistency model."""
 
@@ -395,6 +443,7 @@ def get_model(model_name):
         "ssd-1b": SSD1B,
         "latent-consistency": LatentConsistencyModel,
         "kandinsky-2.2": Kandinsky,
+        "playground-v2": PlaygroundV2,
         "dalle2": DALLE2,
         "dalle3": DALLE3,
         "vqgan-clip": VQGANCLIP,
@@ -444,6 +493,17 @@ def set_kandinsky_config(sample, ctx):
     )
 
 
+def set_playground_v2_config(sample, ctx):
+    sample["playground_v2_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get("inference_steps", 50),
+        width=ctx.params.get("width", 1024),
+        height=ctx.params.get("height", 1024),
+        guidance_scale=ctx.params.get("guidance_scale", 3.0),
+        scheduler=ctx.params.get("scheduler_choices", "None provided"),
+        negative_prompt=ctx.params.get("negative_prompt", None),
+    )
+
+
 def set_latent_consistency_config(sample, ctx):
     sample["latent_consistency_config"] = fo.DynamicEmbeddedDocument(
         inference_steps=ctx.params.get("num_inference_steps", 4),
@@ -479,6 +539,7 @@ def set_config(sample, ctx, model_name):
         "ssd-1b": set_ssd1b_config,
         "latent-consistency": set_latent_consistency_config,
         "kandinsky-2.2": set_kandinsky_config,
+        "playground-v2": set_playground_v2_config,
         "dalle2": set_dalle2_config,
         "dalle3": set_dalle3_config,
         "vqgan-clip": set_vqgan_clip_config,
@@ -503,6 +564,7 @@ def _add_replicate_choices(model_choices):
     model_choices.add_choice("sdxl", label="SDXL")
     model_choices.add_choice("ssd-1b", label="SSD-1B")
     model_choices.add_choice("kandinsky-2.2", label="Kandinsky 2.2")
+    model_choices.add_choice("playground-v2", label="Playground V2")
     if "latent-consistency" not in model_choices.values():
         model_choices.add_choice(
             "latent-consistency", label="Latent Consistency"
@@ -704,6 +766,37 @@ def _handle_kandinsky_input(ctx, inputs):
     )
 
 
+#### PLAYGROUND V2 INPUTS ####
+def _handle_playground_v2_input(ctx, inputs):
+    inputs.int("width", label="Width", default=1024)
+    inputs.int("height", label="Height", default=1024)
+
+    inputs.str("negative_prompt", label="Negative Prompt", required=False)
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 100, "step": 1}},
+    )
+    inputs.int("inference_steps", default=50, view=inference_steps_slider)
+
+    guidance_scale_slider = types.SliderView(
+        label="Guidance Scale",
+        componentsProps={"slider": {"min": 0.0, "max": 10.0, "step": 0.1}},
+    )
+    inputs.float("guidance_scale", default=3.0, view=guidance_scale_slider)
+
+    scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
+    for scheduler in PLAYGROUND_V2_SCHEDULER_CHOICES:
+        scheduler_choices_dropdown.add_choice(scheduler, label=scheduler)
+
+    inputs.enum(
+        "scheduler_choices",
+        scheduler_choices_dropdown.values(),
+        default="K_EULER_ANCESTRAL",
+        view=scheduler_choices_dropdown,
+    )
+
+
 #### LATENT CONSISTENCY INPUTS ####
 def _handle_latent_consistency_input(ctx, inputs):
 
@@ -796,6 +889,7 @@ INPUT_MAPPER = {
     "sdxl": _handle_sdxl_input,
     "ssd-1b": _handle_ssd1b_input,
     "kandinsky-2.2": _handle_kandinsky_input,
+    "playground-v2": _handle_playground_v2_input,
     "latent-consistency": _handle_latent_consistency_input,
     "dalle2": _handle_dalle2_input,
     "dalle3": _handle_dalle3_input,

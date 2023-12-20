@@ -4,7 +4,7 @@
 
 ### Updates
 
-- **2023-12-19**: Added support for Kandinsky-2.2 Model
+- **2023-12-19**: Added support for Kandinsky-2.2 and Playground V2 models
 - **2023-11-30**: Version 1.2.0
   - adds local model running via `diffusers` (>=0.24.0)
   - adds [calling from the Python SDK](#python-sdk)!
@@ -30,6 +30,7 @@ This version of the plugin supports the following models:
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
 - [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
 - [Kandinsky-2.2](https://replicate.com/ai-forever/kandinsky-2.2)
+- [Playground V2](https://replicate.com/playgroundai/playground-v2-1024px-aesthetic)
 - [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
 - [DALL-E2](https://openai.com/dall-e-2)
 - [DALL-E3](https://openai.com/dall-e-3)
