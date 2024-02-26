@@ -26,15 +26,15 @@ work for remote datasets.
 
 This version of the plugin supports the following models:
 
-- [SDXL](https://replicate.com/stability-ai/sdxl)
-- [SDXL-Lighting](https://replicate.com/lucataco/sdxl-lightning-4step)
-- [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
-- [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
-- [Kandinsky-2.2](https://replicate.com/ai-forever/kandinsky-2.2)
-- [Playground V2](https://replicate.com/playgroundai/playground-v2-1024px-aesthetic)
-- [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
 - [DALL-E2](https://openai.com/dall-e-2)
 - [DALL-E3](https://openai.com/dall-e-3)
+- [Kandinsky-2.2](https://replicate.com/ai-forever/kandinsky-2.2)
+- [Latent Consistency Model](https://replicate.com/luosiallen/latent-consistency-model/)
+- [Playground V2](https://replicate.com/playgroundai/playground-v2-1024px-aesthetic)
+- [SDXL](https://replicate.com/stability-ai/sdxl)
+- [SDXL-Lighting](https://replicate.com/lucataco/sdxl-lightning-4step)
+- [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
+- [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
 - [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 
 It is straightforward to add support for other models!
