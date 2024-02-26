@@ -1,7 +1,7 @@
 fiftyone:
   version: ">=0.22.0"
 name: "@jacobmarks/text_to_image"
-version: "1.2.3"
+version: "1.2.4"
 description: "Run Text-to-image models to add synthetic images directly to your dataset!"
 url: "https://github.com/jacobmarks/text-to-image"
 operators:
