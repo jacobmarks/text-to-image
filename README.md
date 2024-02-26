@@ -27,6 +27,7 @@ work for remote datasets.
 This version of the plugin supports the following models:
 
 - [SDXL](https://replicate.com/stability-ai/sdxl)
+- [SDXL-Lighting](https://replicate.com/lucataco/sdxl-lightning-4step)
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
 - [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
 - [Kandinsky-2.2](https://replicate.com/ai-forever/kandinsky-2.2)

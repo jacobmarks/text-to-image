@@ -65,6 +65,23 @@ SDXL_REFINE_MAP = {
     "Base": "base_image_refiner",
 }
 
+SDXL_LIGHTNING_MODEL_URL = "lucataco/sdxl-lightning-4step:727e49a643e999d602a896c774a0658ffefea21465756a6ce24b7ea4165eba6a"
+SDXL_LIGHTNING_SIZE_CHOICES = ("1024", "1280")
+SDXL_LIGHTNING_NEGATIVE_PROMPT_DEFAULT = "worst quality, low quality"
+SDXL_LIGHTNING_SCHEDULER_CHOICES = (
+    "DDIM",
+    "DPMSolverMultistep",
+    "HeunDiscrete",
+    "KarrasDPM",
+    "K_EULER_ANCESTRAL",
+    "K_EULER",
+    "PNDM",
+    "DPM+2MSDE",
+)
+SDXL_LIGHTNING_NUM_INFERENCE_STEPS_DEFAULT = 4
+SDXL_LIGHTNING_GUIDANCE_SCALE_DEFAULT = 7.5
+
+
 SSD1B_MODEL_URL = "lucataco/ssd-1b:1ee85ef681d5ad3d6870b9da1a4543cb3ad702d036fa5b5210f133b83b05a780"
 SSD1B_SCHEDULER_CHOICES = (
     "DDIM",
@@ -215,6 +232,50 @@ class SDXL(Text2Image):
             _inputs["refine_steps"] = refine_steps
         if high_noise_frac is not None:
             _inputs["high_noise_frac"] = high_noise_frac
+
+        response = replicate.run(
+            self.model_name,
+            input=_inputs,
+        )
+        if type(response) == list:
+            response = response[0]
+        return response
+
+
+class SDXLLightning(Text2Image):
+    """Wrapper for a StableDiffusion XL Lightning model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "sdxl-lightning"
+        self.model_name = SDXL_LIGHTNING_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        negative_prompt = ctx.params.get(
+            "negative_prompt", SDXL_LIGHTNING_NEGATIVE_PROMPT_DEFAULT
+        )
+        inference_steps = ctx.params.get(
+            "inference_steps", SDXL_LIGHTNING_NUM_INFERENCE_STEPS_DEFAULT
+        )
+        scheduler = ctx.params.get(
+            "scheduler_choices", SDXL_LIGHTNING_SCHEDULER_CHOICES[0]
+        )
+        guidance_scale = ctx.params.get(
+            "guidance_scale", SDXL_LIGHTNING_GUIDANCE_SCALE_DEFAULT
+        )
+        width = ctx.params.get("width", SDXL_LIGHTNING_SIZE_CHOICES[0])
+        height = ctx.params.get("height", SDXL_LIGHTNING_SIZE_CHOICES[0])
+
+        _inputs = {
+            "prompt": prompt,
+            "num_inference_steps": inference_steps,
+            "scheduler": scheduler,
+            "guidance_scale": guidance_scale,
+            "negative_prompt": negative_prompt,
+            "width": int(width),
+            "height": int(height),
+        }
 
         response = replicate.run(
             self.model_name,
@@ -440,6 +501,7 @@ def get_model(model_name):
     mapping = {
         "sd": StableDiffusion,
         "sdxl": SDXL,
+        "sdxl-lightning": SDXLLightning,
         "ssd-1b": SSD1B,
         "latent-consistency": LatentConsistencyModel,
         "kandinsky-2.2": Kandinsky,
@@ -471,6 +533,23 @@ def set_sdxl_config(sample, ctx):
         refine_steps=ctx.params.get("refine_steps", None),
         negative_prompt=ctx.params.get("negative_prompt", None),
         high_noise_frac=ctx.params.get("high_noise_frac", None),
+    )
+
+
+def set_sdxl_lightning_config(sample, ctx):
+    sample["sdxl_lightning_config"] = fo.DynamicEmbeddedDocument(
+        inference_steps=ctx.params.get(
+            "inference_steps", SDXL_LIGHTNING_NUM_INFERENCE_STEPS_DEFAULT
+        ),
+        scheduler=ctx.params.get("scheduler_choices", "None provided"),
+        guidance_scale=ctx.params.get(
+            "guidance_scale", SDXL_LIGHTNING_GUIDANCE_SCALE_DEFAULT
+        ),
+        width=ctx.params.get("width", 1024),
+        height=ctx.params.get("height", 1024),
+        negative_prompt=ctx.params.get(
+            "negative_prompt", SDXL_LIGHTNING_NEGATIVE_PROMPT_DEFAULT
+        ),
     )
 
 
@@ -536,6 +615,7 @@ def set_config(sample, ctx, model_name):
     mapping = {
         "sd": set_stable_diffusion_config,
         "sdxl": set_sdxl_config,
+        "sdxl-lightning": set_sdxl_lightning_config,
         "ssd-1b": set_ssd1b_config,
         "latent-consistency": set_latent_consistency_config,
         "kandinsky-2.2": set_kandinsky_config,
@@ -562,6 +642,7 @@ def generate_filepath(ctx):
 def _add_replicate_choices(model_choices):
     model_choices.add_choice("sd", label="Stable Diffusion")
     model_choices.add_choice("sdxl", label="SDXL")
+    model_choices.add_choice("sdxl-lightning", label="SDXL Lightning")
     model_choices.add_choice("ssd-1b", label="SSD-1B")
     model_choices.add_choice("kandinsky-2.2", label="Kandinsky 2.2")
     model_choices.add_choice("playground-v2", label="Playground V2")
@@ -690,6 +771,70 @@ def _handle_sdxl_input(ctx, inputs):
             description="The fraction of noise to use",
             default=0.8,
         )
+
+
+#### SDXL LIGHTNING INPUTS ####
+def _handle_sdxl_lightning_input(ctx, inputs):
+    size_choices = SDXL_LIGHTNING_SIZE_CHOICES
+    width_choices = types.Dropdown(label="Width")
+    for size in size_choices:
+        width_choices.add_choice(size, label=size)
+
+    inputs.enum(
+        "width",
+        width_choices.values(),
+        default=SDXL_LIGHTNING_SIZE_CHOICES[0],
+        view=width_choices,
+    )
+
+    height_choices = types.Dropdown(label="Height")
+    for size in size_choices:
+        height_choices.add_choice(size, label=size)
+
+    inputs.enum(
+        "height",
+        height_choices.values(),
+        default=SDXL_LIGHTNING_SIZE_CHOICES[0],
+        view=height_choices,
+    )
+
+    inputs.str(
+        "negative_prompt",
+        label="Negative Prompt",
+        required=False,
+        default=SDXL_LIGHTNING_NEGATIVE_PROMPT_DEFAULT,
+    )
+
+    inference_steps_slider = types.SliderView(
+        label="Num Inference Steps",
+        componentsProps={"slider": {"min": 1, "max": 10, "step": 1}},
+    )
+    inputs.int(
+        "inference_steps",
+        default=SDXL_LIGHTNING_NUM_INFERENCE_STEPS_DEFAULT,
+        view=inference_steps_slider,
+    )
+
+    guidance_scale_slider = types.SliderView(
+        label="Guidance Scale",
+        componentsProps={"slider": {"min": 0.0, "max": 10.0, "step": 0.1}},
+    )
+    inputs.float(
+        "guidance_scale",
+        default=SDXL_LIGHTNING_GUIDANCE_SCALE_DEFAULT,
+        view=guidance_scale_slider,
+    )
+
+    scheduler_choices_dropdown = types.Dropdown(label="Scheduler")
+    for scheduler in SDXL_LIGHTNING_SCHEDULER_CHOICES:
+        scheduler_choices_dropdown.add_choice(scheduler, label=scheduler)
+
+    inputs.enum(
+        "scheduler_choices",
+        scheduler_choices_dropdown.values(),
+        default="K_EULER",
+        view=scheduler_choices_dropdown,
+    )
 
 
 #### SSD-1B INPUTS ####
@@ -887,6 +1032,7 @@ def _handle_vqgan_clip_input(ctx, inputs):
 INPUT_MAPPER = {
     "sd": _handle_stable_diffusion_input,
     "sdxl": _handle_sdxl_input,
+    "sdxl-lightning": _handle_sdxl_lightning_input,
     "ssd-1b": _handle_ssd1b_input,
     "kandinsky-2.2": _handle_kandinsky_input,
     "playground-v2": _handle_playground_v2_input,
