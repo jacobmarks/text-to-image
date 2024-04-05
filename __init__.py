@@ -1161,9 +1161,9 @@ class Txt2Image(foo.Operator):
 
         if dataset.get_dynamic_field_schema() is not None:
             dataset.add_dynamic_sample_fields()
-            ctx.trigger("reload_dataset")
+            ctx.ops.reload_dataset()
         else:
-            ctx.trigger("reload_samples")
+            ctx.ops.reload_samples()
 
     def list_models(self):
         return list(INPUT_MAPPER.keys())
