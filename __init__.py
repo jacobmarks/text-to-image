@@ -132,6 +132,12 @@ DALLE3_SIZE_CHOICES = ("1024x1024", "1024x1792", "1792x1024")
 DALLE3_QUALITY_CHOICES = ("standard", "hd")
 
 
+
+SD3_ASPECT_RATIO_CHOICES = ("1:1", "16:9", "21:9", "2:3", "3:2", "4:5", "5:4", "9:16", "9:21" )
+
+SD3_MODEL_URL = "https://api.stability.ai/v2beta/stable-image/generate/sd3"
+
+
 def allows_replicate_models():
     """Returns whether the current environment allows replicate models."""
     return (
@@ -143,6 +149,10 @@ def allows_replicate_models():
 def allows_openai_models():
     """Returns whether the current environment allows openai models."""
     return find_spec("openai") is not None and "OPENAI_API_KEY" in os.environ
+
+def allows_stabilityai_models():
+    """Returns whether the current environment allows stabilityai models."""
+    return "STABILITY_API_KEY" in os.environ
 
 
 def allows_diffusers_models():
@@ -158,6 +168,12 @@ def download_image(image_url, filename):
     with open(filename, "wb") as handler:
         handler.write(img_data)
 
+def write_image(response, filename):
+    if response.status_code == 200:
+        with open(filename, 'wb') as file:
+            file.write(response.content)
+    else:
+        raise Exception(str(response.json()))
 
 class Text2Image:
     """Wrapper for a Text2Image model."""
@@ -285,6 +301,40 @@ class SDXLLightning(Text2Image):
             response = response[0]
         return response
 
+class StableDiffusion3(Text2Image):
+    """Wrapper for a StableDiffusion 3 model."""
+
+    def __init__(self):
+        super().__init__()
+        self.name = "stable-diffusion-3"
+        self.model_name = SD3_MODEL_URL
+
+    def generate_image(self, ctx):
+        prompt = ctx.params.get("prompt", "None provided")
+        aspect_ratio = ctx.params.get("aspect_ratio", SD3_ASPECT_RATIO_CHOICES[0])
+        seed = ctx.params.get("seed", 51)
+        negative_prompt = ctx.params.get("negative_prompt", "")
+
+        stability_key = os.environ["STABILITY_API_KEY"]
+
+        response = requests.post(
+            SD3_MODEL_URL,
+            headers={
+                "authorization": f"Bearer {stability_key}",
+                "accept": "image/*"
+            },
+            files={"none": ''},
+            data={
+                "prompt": prompt,
+                "aspect_ratio": aspect_ratio,
+                "negative_prompt": negative_prompt,
+                "seed": seed,
+                "output_format": "jpeg",
+            },
+        )
+        if type(response) == list:
+            response = response[0]
+        return response
 
 class SSD1B(Text2Image):
     """Wrapper for a SSD-1B model."""
@@ -509,6 +559,7 @@ def get_model(model_name):
         "dalle2": DALLE2,
         "dalle3": DALLE3,
         "vqgan-clip": VQGANCLIP,
+        "stable-diffusion-3": StableDiffusion3,
     }
     return mapping[model_name]()
 
@@ -549,6 +600,17 @@ def set_sdxl_lightning_config(sample, ctx):
         height=ctx.params.get("height", 1024),
         negative_prompt=ctx.params.get(
             "negative_prompt", SDXL_LIGHTNING_NEGATIVE_PROMPT_DEFAULT
+        ),
+    )
+
+def set_sd3_config(sample, ctx):
+    sample["sd3_config"] = fo.DynamicEmbeddedDocument(
+        aspect_ratio = ctx.params.get("aspect_ratio", SD3_ASPECT_RATIO_CHOICES[0]),
+        negative_prompt=ctx.params.get(
+            "negative_prompt", ""
+        ),
+        seed=ctx.params.get(
+            "seed", 51
         ),
     )
 
@@ -623,6 +685,7 @@ def set_config(sample, ctx, model_name):
         "dalle2": set_dalle2_config,
         "dalle3": set_dalle3_config,
         "vqgan-clip": set_vqgan_clip_config,
+        "stable-diffusion-3": set_sd3_config,
     }
 
     config_setter = mapping[model_name]
@@ -657,6 +720,8 @@ def _add_openai_choices(model_choices):
     model_choices.add_choice("dalle2", label="DALL-E2")
     model_choices.add_choice("dalle3", label="DALL-E3")
 
+def _add_stability_choices(model_choices):
+    model_choices.add_choice("stable-diffusion-3", label="Stable Diffusion 3")
 
 def _add_diffusers_choices(model_choices):
     if "latent-consistency" not in model_choices.values():
@@ -836,6 +901,35 @@ def _handle_sdxl_lightning_input(ctx, inputs):
         view=scheduler_choices_dropdown,
     )
 
+    #### SD3 INPUTS ####
+def _handle_sd3_input(ctx, inputs):
+    aspect_choices = SD3_ASPECT_RATIO_CHOICES
+    aspect_choices_drop = types.Dropdown(label="Aspect Ratio")
+    for aspect in aspect_choices:
+        aspect_choices_drop.add_choice(aspect, label=aspect)
+
+    inputs.enum(
+        "aspect_ratio",
+        aspect_choices_drop.values(),
+        default=SD3_ASPECT_RATIO_CHOICES[0],
+        view=aspect_choices_drop,
+    )
+
+
+    inputs.str(
+        "negative_prompt",
+        label="Negative Prompt",
+        required=False,
+        default="",
+    )
+
+
+    inputs.int("seed",
+            label="seed",
+            description="Enter the seed for the run",
+            default=51,
+            view=types.FieldView(componentsProps={'field': {'min': 1, 'max': 100}})
+    )
 
 #### SSD-1B INPUTS ####
 def _handle_ssd1b_input(ctx, inputs):
@@ -1040,6 +1134,7 @@ INPUT_MAPPER = {
     "dalle2": _handle_dalle2_input,
     "dalle3": _handle_dalle3_input,
     "vqgan-clip": _handle_vqgan_clip_input,
+    "stable-diffusion-3": _handle_sd3_input
 }
 
 
@@ -1092,15 +1187,18 @@ class Txt2Image(foo.Operator):
 
         replicate_flag = allows_replicate_models()
         openai_flag = allows_openai_models()
+        stabilityai_flag = allows_stabilityai_models()
         diffusers_flag = allows_diffusers_models()
 
-        any_flag = replicate_flag or openai_flag or diffusers_flag
+
+
+        any_flag = replicate_flag or openai_flag or diffusers_flag or stabilityai_flag
         if not any_flag:
             inputs.message(
                 "message",
                 label="No models available.",
                 descriptions=(
-                    "You must install one of `replicate`, `openai`, of `diffusers`",
+                    "You must install one of `replicate`, `openai`, or `diffusers` or define a STABILITY_API_KEY",
                     " to use this plugin. ",
                 ),
             )
@@ -1113,6 +1211,8 @@ class Txt2Image(foo.Operator):
             _add_openai_choices(model_choices)
         if diffusers_flag:
             _add_diffusers_choices(model_choices)
+        if stabilityai_flag:
+            _add_stability_choices(model_choices)
         inputs.enum(
             "model_choices",
             model_choices.values(),
@@ -1143,6 +1243,9 @@ class Txt2Image(foo.Operator):
             ## served models return a url
             image_url = response
             download_image(image_url, filepath)
+        elif type(response) == requests.models.Response:
+            ## served model return whole object
+            write_image(response,filepath)
         else:
             ## local models return a PIL image
             response.save(filepath)
