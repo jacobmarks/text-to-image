@@ -4,7 +4,7 @@
 
 ### Updates
 
-- **2024-04-23**: Added support for Stable Diffusion 3
+- **2024-04-23**: Added support for Stable Diffusion 3 (Thanks [Dan Gural](https://github.com/danielgural/))
 - **2023-12-19**: Added support for Kandinsky-2.2 and Playground V2 models
 - **2023-11-30**: Version 1.2.0
   - adds local model running via `diffusers` (>=0.24.0)
@@ -36,8 +36,8 @@ This version of the plugin supports the following models:
 - [SDXL-Lighting](https://replicate.com/lucataco/sdxl-lightning-4step)
 - [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
-- [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 - [Stable Diffusion 3](https://stability.ai/news/stable-diffusion-3)
+- [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
 
 It is straightforward to add support for other models!
 
@@ -79,7 +79,7 @@ locally.
 
 You can also use the `txt2img` operators from the Python SDK!
 
-⚠️ Due to the way Jupyter Notebooks interact with asyncio, this will not work in a Jupyter Notebook. You will need to run this code in a Python script or in a Python console.
+⚠️ If you're using `fiftyone<=0.23.6`, due to the way Jupyter Notebooks interact with asyncio, this will not work in a Jupyter Notebook. You will need to run this code in a Python script or in a Python console.
 
 ```python
 import fiftyone as fo
