@@ -4,6 +4,7 @@
 
 ### Updates
 
+- **2024-04-23**: Added support for Stable Diffusion 3
 - **2023-12-19**: Added support for Kandinsky-2.2 and Playground V2 models
 - **2023-11-30**: Version 1.2.0
   - adds local model running via `diffusers` (>=0.24.0)
@@ -36,6 +37,7 @@ This version of the plugin supports the following models:
 - [Segmind Stable Diffusion (SSD-1B)](https://replicate.com/lucataco/ssd-1b/)
 - [Stable Diffusion](https://replicate.com/stability-ai/stable-diffusion)
 - [VQGAN-CLIP](https://replicate.com/mehdidc/feed_forward_vqgan_clip)
+- [Stable Diffusion 3](https://stability.ai/news/stable-diffusion-3)
 
 It is straightforward to add support for other models!
 
@@ -59,6 +61,9 @@ environment variable `OPENAI_API_KEY` with your API key.
 To run the Latency Consistency model locally with Hugging Face's diffusers library,
 you will need `diffusers>=0.24.0`. If you need to, you can install it with
 `pip install diffusers>=0.24.0`.
+
+To run Stable Diffusion 3, you will need to set up a [Stability.ai](https://platform.stability.ai/) account to get access to key. Then set the environment variable
+`STABILITY_API_KEY` with your API token.
 
 Refer to the [main README](https://github.com/voxel51/fiftyone-plugins) for
 more information about managing downloaded plugins and developing plugins
